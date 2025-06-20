@@ -26,7 +26,7 @@ import numpy as np
 
 from ros2_markertracker_interfaces.msg import FiducialMarker, FiducialMarkerArray
 from ros2_markertracker.ArucoWrapper import ArucoWrapper
-from .wait_for_message import wait_for_message
+from rclpy.wait_for_message import wait_for_message
 
 
 # ---
