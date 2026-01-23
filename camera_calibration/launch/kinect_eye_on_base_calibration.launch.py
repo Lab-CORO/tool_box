@@ -46,7 +46,7 @@ def generate_launch_description():
         ),
         launch_arguments={
             "mode": "real",
-            "host": "192.168.137.100",
+            "host": "192.168.50.100",
             "port": "12345",
             "model": "m1013"
         }.items()
@@ -65,6 +65,7 @@ def generate_launch_description():
             "marker_length": 9.6,
             "aruco_dictionary_id": "DICT_4X4_250",
             "camera_frame_id": "rgb_camera_link",
+            "marker_frame_id": "marker",
             "ignore_marker_ids_array": 17
         }]
     )
@@ -81,7 +82,7 @@ def generate_launch_description():
             'freehand_robot_movement': 'true',
             'robot_base_frame': 'base_link',
             'robot_effector_frame': 'link_6',
-            'tracking_base_frame': 'camera_base',
+            'tracking_base_frame': 'rgb_camera_link',
             'tracking_marker_frame': 'marker'
         }.items()
     )
