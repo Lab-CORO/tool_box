@@ -59,7 +59,7 @@ def generate_launch_description():
         # output="screen",
         namespace="/ros2_markertracker",
         parameters=[{
-            "input_image_topic": "/rgb/image_rect_raw",
+            "input_image_topic": "/rgb/image_raw",
             "publish_topic_image_result": True,
             "camera_info_topic": '/rgb/camera_info',
             "marker_length": 9.6,

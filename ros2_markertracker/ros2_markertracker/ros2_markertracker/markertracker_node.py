@@ -279,6 +279,7 @@ class ProcessFramePubSub(Node):
         _index = -1
         for e in poses:
             # print("coucou")
+            # print("NuqueNuque")
             _index += 1
 
             # if e['marker_id'] != 10: continue # TODO: use params
