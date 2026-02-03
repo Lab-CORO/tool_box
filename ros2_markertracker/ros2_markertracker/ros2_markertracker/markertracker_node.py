@@ -122,14 +122,23 @@ class ProcessFramePubSub(Node):
         self.declare_parameter("camera_info_topic", "/camera_info")
         camera_info_topic = self.get_parameter("camera_info_topic").get_parameter_value().string_value
         # wait for camera info
-        success, camera_info = wait_for_message(CameraInfo, self, camera_info_topic, 10)
+        result = wait_for_message(CameraInfo, self, camera_info_topic)
         
-        if success:
-            # get the intrinsic matrix and distortion coefficients from the camera info
-            _camera_matrix = np.reshape(np.array(camera_info.k), (3, 3))
-            _dist_coeffs = np.array(camera_info.d)
+        if isinstance(result,tuple):
+            success, camera_info = result
+
         else:
-            self.get_logger().error("No camera info")
+            camera_info = result
+            success = camera_info is not None
+
+        if not success or camera_info is None:
+            self.get_logger().error('no camera info received')
+            return
+
+            
+        # get the intrinsic matrix and distortion coefficients from the camera info
+        _camera_matrix = np.reshape(np.array(camera_info.k), (3, 3))
+        _dist_coeffs = np.array(camera_info.d)
 
         # TODO: Setup all remain params for Aruco
 
@@ -270,6 +279,7 @@ class ProcessFramePubSub(Node):
         _index = -1
         for e in poses:
             # print("coucou")
+            # print("NuqueNuque")
             _index += 1
 
             # if e['marker_id'] != 10: continue # TODO: use params

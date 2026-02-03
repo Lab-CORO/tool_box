@@ -2,6 +2,7 @@ import cv2
 import cv2.aruco as aruco
 import math
 from cv2 import drawFrameAxes as drawAxis
+import numpy as np
 
 
 '''
@@ -73,14 +74,55 @@ class ArucoWrapper:
 
         image_result = None
 
-        aruco_corners, aruco_ids, aruco_rejected_points = aruco.detectMarkers(image_gray,
-                                                                              self.aruco_dict,
-                                                                              parameters=self.parameters)
+
+        dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_5X5_250)
+        detectorParams = cv2.aruco.DetectorParameters()
+        aruco = cv2.aruco.ArucoDetector(self.aruco_dict, self.parameters)
+
+
+        aruco_corners, aruco_ids, aruco_rejected_points = aruco.detectMarkers(image_gray)
+
+
+
+        #aruco_corners, aruco_ids, aruco_rejected_points = aruco.detectMarkers(image_gray,
+        #                                                                      self.aruco_dict,
+        #                                                                      parameters=self.parameters)
 
         if draw_image is True and aruco_ids is not None and len(aruco_ids) > 0:
             image_result = aruco.drawDetectedMarkers(image, aruco_corners, aruco_ids)
 
         return image_result, aruco_corners, aruco_ids, aruco_rejected_points
+
+
+        # Source - https://stackoverflow.com/a
+    # Posted by M lab, modified by community. See post 'Timeline' for change history
+    # Retrieved 2026-01-23, License - CC BY-SA 4.0
+
+    def my_estimatePoseSingleMarkers(self,corners, marker_size, mtx, distortion):
+        '''
+        This will estimate the rvec and tvec for each of the marker corners detected by:
+        corners, ids, rejectedImgPoints = detector.detectMarkers(image)
+        corners - is an array of detected corners for each detected marker in the image
+        marker_size - is the size of the detected markers
+        mtx - is the camera matrix
+        distortion - is the camera distortion matrix
+        RETURN list of rvecs, tvecs, and trash (so that it corresponds to the old estimatePoseSingleMarkers())
+        '''
+        marker_points = np.array([[-marker_size / 2, marker_size / 2, 0],
+                                [marker_size / 2, marker_size / 2, 0],
+                                [marker_size / 2, -marker_size / 2, 0],
+                                [-marker_size / 2, -marker_size / 2, 0]], dtype=np.float32)
+
+        trash = []
+        rvecs = []
+        tvecs = []
+        for c in corners:
+            nada, R, t = cv2.solvePnP(marker_points, c, mtx, distortion, False, cv2.SOLVEPNP_IPPE_SQUARE)
+            rvecs.append(R)
+            tvecs.append(t)
+            trash.append(nada)
+        return rvecs, tvecs, trash
+
 
 
     def find_poses_from_corners(self, aruco_ids, aruco_corners, image_color=None, draw_image=False):
@@ -91,10 +133,7 @@ class ArucoWrapper:
 
             poses_result = list()
 
-            rvecs, tvecs, _objPoints = aruco.estimatePoseSingleMarkers(aruco_corners,
-                                                                       self.marker_length,
-                                                                       self.camera_matrix,
-                                                                       self.dist_coeffs)
+            rvecs, tvecs, _objPoints = self.my_estimatePoseSingleMarkers(aruco_corners, self.marker_length, self.camera_matrix, self.dist_coeffs)
 
             for i in range(len(aruco_ids)):
 
