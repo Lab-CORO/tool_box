@@ -41,13 +41,23 @@ class kinectTFComputationNode(Node):
         #Calib avec nouveau Aruco 6 déc:
         #'Current estimate: tx, ty, tz, qx, qy, qz, qw: [0.2725, 0.0811, 0.9726, 0.4272, 0.0920, 0.8986, 0.0397] as euler: translation: 0.2725, 0.0811, 0.9726   rpy: 0.3119, -0.8640, 2.9086')
 
-        self.cam_to_color_tf.transform.translation.x = 0.2725  # À ajuster
-        self.cam_to_color_tf.transform.translation.y = 0.0811  # À ajuster
-        self.cam_to_color_tf.transform.translation.z = 0.9726  # À ajuster
-        self.cam_to_color_tf.transform.rotation.x = 0.4272
-        self.cam_to_color_tf.transform.rotation.y = 0.0920
-        self.cam_to_color_tf.transform.rotation.z = 0.8986
-        self.cam_to_color_tf.transform.rotation.w = 0.0397
+        # self.cam_to_color_tf.transform.translation.x = 0.2725  # À ajuster
+        # self.cam_to_color_tf.transform.translation.y = 0.0811  # À ajuster
+        # self.cam_to_color_tf.transform.translation.z = 0.9726  # À ajuster
+        # self.cam_to_color_tf.transform.rotation.x = 0.4272
+        # self.cam_to_color_tf.transform.rotation.y = 0.0920
+        # self.cam_to_color_tf.transform.rotation.z = 0.8986
+        # self.cam_to_color_tf.transform.rotation.w = 0.0397
+
+
+
+        self.cam_to_color_tf.transform.translation.x = -0.005200  # À ajuster
+        self.cam_to_color_tf.transform.translation.y = -0.298600  # À ajuster
+        self.cam_to_color_tf.transform.translation.z = 1.257900  # À ajuster
+        self.cam_to_color_tf.transform.rotation.x = 0.414500
+        self.cam_to_color_tf.transform.rotation.y = 0.033200
+        self.cam_to_color_tf.transform.rotation.z = 0.903400
+        self.cam_to_color_tf.transform.rotation.w = -0.104200
 
  
     def timer_callback(self):

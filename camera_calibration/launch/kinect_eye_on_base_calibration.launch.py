@@ -28,16 +28,16 @@ def generate_launch_description():
     )
     
     # Rectify node (Kinect 2D image)
-    rectify_node = Node(
-        package="image_proc",
-        executable="rectify_node",
-        name="rectify_rgb",
-        remappings=[
-            ("image", "rgb/image_raw"),
-            ("image_rect", "rgb/image_rect_raw"),
-            ("camera_info", "/rgb/camera_info")
-        ]
-    )
+    # rectify_node = Node(
+    #     package="image_proc",
+    #     executable="rectify_node",
+    #     name="rectify_rgb",
+    #     remappings=[
+    #         ("image", "rgb/image_raw"),
+    #         ("image_rect", "rgb/image_rect_raw"),
+    #         ("camera_info", "/rgb/camera_info")
+    #     ]
+    # )
 
     # Chemin des fichiers de lancement pour d'autres packages
     dsr_bringup2_launch = IncludeLaunchDescription(
@@ -100,7 +100,7 @@ def generate_launch_description():
         camera_info_topic_arg,
         dsr_bringup2_launch,
         azure_kinect_driver_launch,
-        rectify_node,
+        #rectify_node,
         markertracker_node,
         handeye_calibration_launch
     ])
