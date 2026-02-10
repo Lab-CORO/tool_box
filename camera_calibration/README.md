@@ -65,6 +65,12 @@ When the calibration is completed, the terminal should output the transform gene
 
 Take the quaternion or euler values and put them into the corresponding tf2 node to broadcast the new transformation.
 
+when all poses are taken, run the transformation node
+
+```bash
+ros2 run camera_calibration kinect_tf_computation_node
+```
+
 ## Tips for accuracy
     Wait for the stability of the marker's tf in rviz
     Maximize rotation between poses.
