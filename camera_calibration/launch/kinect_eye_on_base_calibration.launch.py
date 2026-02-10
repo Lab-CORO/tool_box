@@ -108,6 +108,7 @@ def generate_launch_description():
         dsr_bringup2_launch,
         azure_kinect_driver_launch,
         #rectify_node,
-        markertracker_start,
+        # markertracker_start,
+        markertracker_node,
         handeye_calibration_launch
     ])

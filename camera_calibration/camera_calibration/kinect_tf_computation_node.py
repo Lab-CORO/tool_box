@@ -51,13 +51,23 @@ class kinectTFComputationNode(Node):
 
 
 
-        self.cam_to_color_tf.transform.translation.x = -0.005200  # À ajuster
-        self.cam_to_color_tf.transform.translation.y = -0.298600  # À ajuster
-        self.cam_to_color_tf.transform.translation.z = 1.257900  # À ajuster
-        self.cam_to_color_tf.transform.rotation.x = 0.414500
-        self.cam_to_color_tf.transform.rotation.y = 0.033200
-        self.cam_to_color_tf.transform.rotation.z = 0.903400
-        self.cam_to_color_tf.transform.rotation.w = -0.104200
+        # self.cam_to_color_tf.transform.translation.x = -0.005200  # À ajuster
+        # self.cam_to_color_tf.transform.translation.y = -0.298600  # À ajuster
+        # self.cam_to_color_tf.transform.translation.z = 1.257900  # À ajuster
+        # self.cam_to_color_tf.transform.rotation.x = 0.414500
+        # self.cam_to_color_tf.transform.rotation.y = 0.033200
+        # self.cam_to_color_tf.transform.rotation.z = 0.903400
+        # self.cam_to_color_tf.transform.rotation.w = -0.104200
+
+        self.cam_to_color_tf.transform.translation.x = 0.1946 # À ajuster
+        self.cam_to_color_tf.transform.translation.y = -0.3640  # À ajuster
+        self.cam_to_color_tf.transform.translation.z = 0.9618  # À ajuster
+        self.cam_to_color_tf.transform.rotation.x = 0.4544
+        self.cam_to_color_tf.transform.rotation.y = 0.0085
+        self.cam_to_color_tf.transform.rotation.z = 0.8659
+        self.cam_to_color_tf.transform.rotation.w = -0.2091
+
+        # # std_srvs.srv.Trigger_Response(success=True, message='Current estimate: tx, ty, tz, qx, qy, qz, qw: [0.1946, -0.3640, 0.9618, 0.4544, 0.0085, 0.8659, -0.2091] as euler: translation: 0.1946, -0.3640, 0.9618   rpy: -0.2903, -0.9116, -2.5247')
 
  
     def timer_callback(self):
