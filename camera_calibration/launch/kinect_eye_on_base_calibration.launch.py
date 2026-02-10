@@ -1,5 +1,5 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
 from launch.substitutions import LaunchConfiguration
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory
@@ -56,19 +56,26 @@ def generate_launch_description():
     markertracker_node = Node(
         package='ros2_markertracker',
         executable='markertracker_node',
-        # output="screen",
-        namespace="/ros2_markertracker",
+        output='screen',
+        namespace="/ros2_markertracker",  # REMOVED: causes initialization issues
         parameters=[{
             "input_image_topic": "/rgb/image_raw",
             "publish_topic_image_result": True,
             "camera_info_topic": '/rgb/camera_info',
             "marker_length": 9.6,
             "aruco_dictionary_id": "DICT_4X4_250",
+
+            #"aruco_dictionary_id": "DICT_APRILTAG_36H11",
             "camera_frame_id": "rgb_camera_link",
             "marker_frame_id": "marker",
             "ignore_marker_ids_array": 17
         }]
     )
+
+    # markertracker_start = TimerAction(
+    #     period=8.0,
+    #     actions=[markertracker_node]
+    # )
 
     handeye_calibration_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -101,6 +108,6 @@ def generate_launch_description():
         dsr_bringup2_launch,
         azure_kinect_driver_launch,
         #rectify_node,
-        markertracker_node,
+        markertracker_start,
         handeye_calibration_launch
     ])

@@ -33,7 +33,7 @@ from rclpy.wait_for_message import wait_for_message
 # Ros2
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import qos_profile_sensor_data, QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 # from std_msgs.msg import String
 
 
@@ -99,7 +99,7 @@ class ProcessFramePubSub(Node):
         _result_marker_topic = '/fiducial_markers'
 
         # Declare and read parameters
-        self.declare_parameter("input_image_topic", "/camera/image_raw")
+        self.declare_parameter("input_image_topic", "/rgb/image_raw")
         _input_image_topic = self.get_parameter("input_image_topic").get_parameter_value().string_value
 
         self.declare_parameter("marker_length", 10.0)
@@ -121,18 +121,34 @@ class ProcessFramePubSub(Node):
         # get camera info from topic
         self.declare_parameter("camera_info_topic", "/camera_info")
         camera_info_topic = self.get_parameter("camera_info_topic").get_parameter_value().string_value
-        # wait for camera info
-        result = wait_for_message(CameraInfo, self, camera_info_topic)
         
-        if isinstance(result,tuple):
-            success, camera_info = result
-
-        else:
-            camera_info = result
-            success = camera_info is not None
-
-        if not success or camera_info is None:
-            self.get_logger().error('no camera info received')
+        # wait for camera info with retry logic (timeout 30 seconds)
+        self.get_logger().info(f'Waiting for camera info on {camera_info_topic}...')
+        max_retries = 6
+        retry_delay = 5  # seconds
+        camera_info = None
+        
+        for attempt in range(max_retries):
+            try:
+                result = wait_for_message(CameraInfo, self, camera_info_topic, time_to_wait=5.0)
+                
+                if isinstance(result, tuple):
+                    success, camera_info = result
+                else:
+                    camera_info = result
+                    success = camera_info is not None
+                
+                if success and camera_info is not None:
+                    self.get_logger().info(f'Camera info received on attempt {attempt + 1}')
+                    break
+            except Exception as e:
+                self.get_logger().warn(f'Attempt {attempt + 1}/{max_retries}: Camera info not ready - {str(e)}')
+                if attempt < max_retries - 1:
+                    import time
+                    time.sleep(retry_delay)
+        
+        if camera_info is None:
+            self.get_logger().error('Failed to get camera info after multiple attempts')
             return
 
             
@@ -160,18 +176,30 @@ class ProcessFramePubSub(Node):
         ## Subscribers
 
         # Image raw topic
+        # Use a permissive QoS profile that auto-negotiates with most camera drivers
+        image_qos = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,  # Changed to RELIABLE - Kinect may use this
+            durability=DurabilityPolicy.VOLATILE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=10  # Increased buffer to avoid missing frames
+        )
 
         self.image_sub = self.create_subscription(Image,
                                                   _input_image_topic,
                                                   self._image_callback,
-                                                  qos_profile=qos_profile_sensor_data)
+                                                  qos_profile=image_qos)
 
         # self.image_sub = rospy.Subscriber(_input_image_topic, Image, self._callback, queue_size=1)
-        self.get_logger().info(f'Subscribed to {_input_image_topic}')
+        self.get_logger().info(f'Subscribed to {_input_image_topic} with RELIABLE QoS')
 
 
         self.latest_msg = None  # keep latest received message
         self.new_msg_available = False
+        
+        # # DEBUG COUNTERS (uncomment for troubleshooting)
+        # self.image_count = 0
+        # self.marker_detection_count = 0
+        # self.publish_count = 0
 
         ## ---
         ## Publishers
@@ -204,7 +232,12 @@ class ProcessFramePubSub(Node):
             print(e)
 
     def _image_callback(self, data):
-        # self.get_logger().info('Got New camera image')
+        # # DEBUG: uncomment for troubleshooting
+        # self.image_count += 1
+        # if self.image_count == 1:
+        #     self.get_logger().info(f'[DEBUG] First image received! Callback is working.')
+        # if self.image_count % 30 == 0:
+        #     self.get_logger().info(f'[DEBUG] Images received: {self.image_count}')
         self.latest_msg = data
         self.new_msg_available = True
 
@@ -219,7 +252,7 @@ class ProcessFramePubSub(Node):
         try:
             cv_image = self.bridge.imgmsg_to_cv2(image, "bgr8")
         except CvBridgeError as e:
-            print(e)
+            self.get_logger().error(f'CvBridge Error: {e}')
             raise e
 
         ## Pose and corners used
@@ -227,8 +260,16 @@ class ProcessFramePubSub(Node):
                                                                     draw_image=self.publish_topic_image_result)
 
         # process poses to messages
-        if poses is not None:
+        if poses is not None and len(poses) > 0:
+            # # DEBUG: uncomment for troubleshooting
+            # self.marker_detection_count += 1
+            # if self.marker_detection_count % 10 == 0:
+            #     self.get_logger().info(f'[DEBUG] Markers detected: {self.marker_detection_count}, Last detection: {len(poses)} markers')
             self._create_and_publish_markers_msgs_from_pose_results(poses, image.header.stamp, self._camera_frame_id)
+        # else:
+        #     # DEBUG: uncomment for troubleshooting
+        #     if self.image_count % 100 == 0:
+        #         self.get_logger().warn(f'[DEBUG] No markers detected in last 100 frames')
 
 
         # Publish CV debug image
@@ -367,6 +408,9 @@ class ProcessFramePubSub(Node):
         self.poses_pub.publish(pose_array)
         self.marker_viz_pub.publish(marker_array)
         self.fiducial_markers_pub.publish(gate_marker_array)
+        # # DEBUG: uncomment for troubleshooting
+        # self.publish_count += len(poses)
+        # self.get_logger().info(f'[PUBLISH] Published {len(poses)} poses (total published: {self.publish_count})')
 
     def create_gate_marker_object(self, pose, corners, frame_id, image_timestamp, marker_id):
 

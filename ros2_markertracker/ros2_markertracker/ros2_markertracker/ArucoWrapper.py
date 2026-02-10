@@ -162,6 +162,13 @@ class ArucoWrapper:
 
     def get_poses_from_image(self,image, draw_image=False):
         _, aruco_corners, aruco_ids, _ = self.find_corners_from_image(image)
+
+        if aruco_ids is None:
+            print("NO ARUCO DETECTED")
+        else:
+            print(f"Detected {len(aruco_ids)} markers")
+
+
         return self.find_poses_from_corners(aruco_ids, aruco_corners, image, draw_image=draw_image)
 
 
