@@ -26,18 +26,7 @@ def generate_launch_description():
             os.path.join(get_package_share_directory("azure_kinect_ros_driver"), "launch", "driver.launch.py")
         )
     )
-    
-    # Rectify node (Kinect 2D image)
-    # rectify_node = Node(
-    #     package="image_proc",
-    #     executable="rectify_node",
-    #     name="rectify_rgb",
-    #     remappings=[
-    #         ("image", "rgb/image_raw"),
-    #         ("image_rect", "rgb/image_rect_raw"),
-    #         ("camera_info", "/rgb/camera_info")
-    #     ]
-    # )
+
 
     # Chemin des fichiers de lancement pour d'autres packages
     dsr_bringup2_launch = IncludeLaunchDescription(
@@ -62,20 +51,13 @@ def generate_launch_description():
             "input_image_topic": "/rgb/image_raw",
             "publish_topic_image_result": True,
             "camera_info_topic": '/rgb/camera_info',
-            "marker_length": 9.6,
-            "aruco_dictionary_id": "DICT_4X4_250",
-
-            #"aruco_dictionary_id": "DICT_APRILTAG_36H11",
+            "marker_length": 8.6,
+            "aruco_dictionary_id": "DICT_APRILTAG_36H11",
             "camera_frame_id": "rgb_camera_link",
             "marker_frame_id": "marker",
             "ignore_marker_ids_array": 17
         }]
     )
-
-    # markertracker_start = TimerAction(
-    #     period=8.0,
-    #     actions=[markertracker_node]
-    # )
 
     handeye_calibration_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -107,8 +89,6 @@ def generate_launch_description():
         camera_info_topic_arg,
         dsr_bringup2_launch,
         azure_kinect_driver_launch,
-        #rectify_node,
-        # markertracker_start,
         markertracker_node,
         handeye_calibration_launch
     ])
