@@ -14,7 +14,8 @@ from geometry_msgs.msg import Point, PoseWithCovarianceStamped, PoseArray, Pose,
 from sensor_msgs.msg import Image, CameraInfo
 
 # from tf.transformations import quaternion_from_euler, euler_from_quaternion, euler_from_matrix
-from ros2_markertracker.transformations import quaternion_from_euler
+# from ros2_markertracker.transformations import quaternion_from_euler
+from scipy.spatial.transform import Rotation as R
 
 # from tf import TransformBroadcaster
 import tf_transformations
@@ -305,7 +306,6 @@ class ProcessFramePubSub(Node):
         return marker
 
     def _create_and_publish_markers_msgs_from_pose_results(self, poses, image_timestamp, camera_frame_id):
-        print(poses)
 
         marker_array = MarkerArray()  # For Rviz visualization
 
@@ -319,47 +319,28 @@ class ProcessFramePubSub(Node):
 
         _index = -1
         for e in poses:
-            # print("coucou")
-            # print("NuqueNuque")
             _index += 1
 
-            # if e['marker_id'] != 10: continue # TODO: use params
 
             gate_pose = Pose()
 
-            # Debug OpenCV Ouput
-            # self.get_logger().info(f"0:{e['tvec'][0]} 1:{e['tvec'][1]} 2:{e['tvec'][2]}")
-            # self.get_logger().debug(f"roll:{e['ros_rpy'][0]} pitch:{e['ros_rpy'][1]} yaw:{e['ros_rpy'][2]}")
+            gate_pose.position.x = e['tvec'][0]/100   # Z_optique → X_rgb (avant)
+            gate_pose.position.y = e['tvec'][1]/100  # -X_optique → Y_rgb (gauche = -droite)
+            gate_pose.position.z = e['tvec'][2]/100   # Y_optique → Z_rgb (bas)
+            
+            r = R.from_euler('xyz', e['rvec'], degrees=False)
+            _quaternion_optical = r.as_quat()
 
-            # print(f"y:{e['tvec'][0]} z:{e['tvec'][1]} x:{e['tvec'][2]}")
-
-            # z, -x, -y
-            gate_pose.position.x = e['tvec'][2]/100
-            gate_pose.position.y = -e['tvec'][0]/100
-            gate_pose.position.z = -e['tvec'][1]/100
-
-            _quaternion = quaternion_from_euler(e['ros_rpy'][0],
-                                                e['ros_rpy'][1],
-                                                e['ros_rpy'][2]
-                                                )
-
-            gate_pose.orientation.x = _quaternion[0]
-            gate_pose.orientation.y = _quaternion[1]
-            gate_pose.orientation.z = _quaternion[2]
-            gate_pose.orientation.w = _quaternion[3]
-
+            gate_pose.orientation.x = _quaternion_optical[0]
+            gate_pose.orientation.y = _quaternion_optical[1]
+            gate_pose.orientation.z = _quaternion_optical[2]
+            gate_pose.orientation.w = _quaternion_optical[3]
             gate_viz_marker = self.create_viz_marker_object(gate_pose)
 
             gate_marker = self.create_gate_marker_object(gate_pose, tuple(e['corners']), camera_frame_id, image_timestamp, e['marker_id'])
 
 
             
-            # Send transform
-            # self.tf_br.sendTransform((gate_pose.position.x, gate_pose.position.y, gate_pose.position.z),
-            #                          _quaternion,
-            #                          image_timestamp,
-            #                          'marker',
-            #                          camera_frame_id)
             result_tf = TransformStamped()
             result_tf.header.stamp = self.get_clock().now().to_msg()
             result_tf.header.frame_id = self._camera_frame_id

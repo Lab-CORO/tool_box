@@ -84,10 +84,6 @@ class ArucoWrapper:
 
 
 
-        #aruco_corners, aruco_ids, aruco_rejected_points = aruco.detectMarkers(image_gray,
-        #                                                                      self.aruco_dict,
-        #                                                                      parameters=self.parameters)
-
         if draw_image is True and aruco_ids is not None and len(aruco_ids) > 0:
             image_result = aruco.drawDetectedMarkers(image, aruco_corners, aruco_ids)
 
@@ -108,10 +104,13 @@ class ArucoWrapper:
         distortion - is the camera distortion matrix
         RETURN list of rvecs, tvecs, and trash (so that it corresponds to the old estimatePoseSingleMarkers())
         '''
-        marker_points = np.array([[-marker_size / 2, marker_size / 2, 0],
-                                [marker_size / 2, marker_size / 2, 0],
-                                [marker_size / 2, -marker_size / 2, 0],
-                                [-marker_size / 2, -marker_size / 2, 0]], dtype=np.float32)
+        # Convention AprilTag: Rotation de 180° autour de Z par rapport à la convention OpenCV standard
+        # Correction: inversion des signes X et Y pour compenser
+        # Ordre des coins: haut-gauche, haut-droit, bas-droit, bas-gauche (après correction)
+        marker_points = np.array([[marker_size / 2, marker_size / 2, 0],    # Bas-droit (devient haut-gauche après 180°)
+                                [-marker_size / 2, marker_size / 2, 0],   # Bas-gauche (devient haut-droit après 180°)
+                                [-marker_size / 2, -marker_size / 2, 0],  # Haut-gauche (devient bas-droit après 180°)
+                                [marker_size / 2, -marker_size / 2, 0]], dtype=np.float32)  # Haut-droit (devient bas-gauche après 180°)
 
         trash = []
         rvecs = []
@@ -137,16 +136,11 @@ class ArucoWrapper:
 
             for i in range(len(aruco_ids)):
 
-                # euler, R = self._get_euler_vector_from_rvec(rvecs[i])
-                # R, _ = cv2.Rodrigues(rvecs[i])
-
                 pose = { 'marker_id': aruco_ids[i][0],
                          'corners': aruco_corners[i].flatten(),
                          'tvec': tvecs[i].flatten(),
                          'rvec': rvecs[i].flatten(),
                          'ros_rpy': rvec2rpy_ros2(rvecs[i]),
-                         # 'rot_m': R,
-                         # 'euler': euler
                          }
 
                 poses_result.append(pose)
@@ -162,13 +156,6 @@ class ArucoWrapper:
 
     def get_poses_from_image(self,image, draw_image=False):
         _, aruco_corners, aruco_ids, _ = self.find_corners_from_image(image)
-
-        if aruco_ids is None:
-            print("NO ARUCO DETECTED")
-        else:
-            print(f"Detected {len(aruco_ids)} markers")
-
-
         return self.find_poses_from_corners(aruco_ids, aruco_corners, image, draw_image=draw_image)
 
 
