@@ -30,14 +30,14 @@ class kinectTFComputationNode(Node):
 
         #Calib manuelle avec model 3D:
         #tx, ty, tz, qx, qy, qz, qw: [0.0374, -0.0625, -0.0603, 0.0153, -0.0466, 0.9926, -0.1110] as euler: translation: 0.0374, -0.0625, -0.0603   rpy: -0.0961, -0.0201, -2.9179')
-
-        self.base_link_to_rgb.transform.translation.x = -0.247400 # À ajuster
-        self.base_link_to_rgb.transform.translation.y = -0.470300  # À ajuster
-        self.base_link_to_rgb.transform.translation.z = 1.082100 # À ajuster
-        self.base_link_to_rgb.transform.rotation.x = 0.191300
-        self.base_link_to_rgb.transform.rotation.y = 0.272700
-        self.base_link_to_rgb.transform.rotation.z = 0.849500
-        self.base_link_to_rgb.transform.rotation.w = -0.409100
+# [hand_eye_calibration-10]       tx, ty, tz, qx, qy, qz, qw: [0.0948, -0.3107, 1.1214, 0.2943, -0.0057, 0.4459, 0.8453]
+        self.base_link_to_rgb.transform.translation.x = 0.0948 # À ajuster
+        self.base_link_to_rgb.transform.translation.y = -0.3107  # À ajuster
+        self.base_link_to_rgb.transform.translation.z =  1.1214# À ajuster
+        self.base_link_to_rgb.transform.rotation.x =0.2943
+        self.base_link_to_rgb.transform.rotation.y = -0.0057
+        self.base_link_to_rgb.transform.rotation.z =  0.4459
+        self.base_link_to_rgb.transform.rotation.w =  0.8453
 
         # # std_srvs.srv.Trigger_Response(success=True, message='Current estimate: tx, ty, tz, qx, qy, qz, qw: [0.1946, -0.3640, 0.9618, 0.4544, 0.0085, 0.8659, -0.2091] as euler: translation: 0.1946, -0.3640, 0.9618   rpy: -0.2903, -0.9116, -2.5247')
 

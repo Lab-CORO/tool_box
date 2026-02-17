@@ -196,11 +196,6 @@ class ProcessFramePubSub(Node):
 
         self.latest_msg = None  # keep latest received message
         self.new_msg_available = False
-        
-        # # DEBUG COUNTERS (uncomment for troubleshooting)
-        # self.image_count = 0
-        # self.marker_detection_count = 0
-        # self.publish_count = 0
 
         ## ---
         ## Publishers
@@ -233,12 +228,6 @@ class ProcessFramePubSub(Node):
             print(e)
 
     def _image_callback(self, data):
-        # # DEBUG: uncomment for troubleshooting
-        # self.image_count += 1
-        # if self.image_count == 1:
-        #     self.get_logger().info(f'[DEBUG] First image received! Callback is working.')
-        # if self.image_count % 30 == 0:
-        #     self.get_logger().info(f'[DEBUG] Images received: {self.image_count}')
         self.latest_msg = data
         self.new_msg_available = True
 
@@ -246,8 +235,6 @@ class ProcessFramePubSub(Node):
 
         if image is None:
             return
-
-        # self.get_logger().info('New image')
 
         ## Preprocess
         try:
@@ -262,15 +249,7 @@ class ProcessFramePubSub(Node):
 
         # process poses to messages
         if poses is not None and len(poses) > 0:
-            # # DEBUG: uncomment for troubleshooting
-            # self.marker_detection_count += 1
-            # if self.marker_detection_count % 10 == 0:
-            #     self.get_logger().info(f'[DEBUG] Markers detected: {self.marker_detection_count}, Last detection: {len(poses)} markers')
             self._create_and_publish_markers_msgs_from_pose_results(poses, image.header.stamp, self._camera_frame_id)
-        # else:
-        #     # DEBUG: uncomment for troubleshooting
-        #     if self.image_count % 100 == 0:
-        #         self.get_logger().warn(f'[DEBUG] No markers detected in last 100 frames')
 
 
         # Publish CV debug image
@@ -354,11 +333,6 @@ class ProcessFramePubSub(Node):
             result_tf.transform.rotation.w = gate_pose.orientation.w
             self.tf_br.sendTransform(result_tf)
 
-            
-
-
-            # PoseWithCovarianceStamped
-            #marker.pose_cov_stamped = self._create_pose_cov_stamped(marker, camera_frame_id, image_timestamp)
 
             marker_array.markers.append(gate_viz_marker)
             pose_array.poses.append(gate_pose)
@@ -389,16 +363,11 @@ class ProcessFramePubSub(Node):
         self.poses_pub.publish(pose_array)
         self.marker_viz_pub.publish(marker_array)
         self.fiducial_markers_pub.publish(gate_marker_array)
-        # # DEBUG: uncomment for troubleshooting
-        # self.publish_count += len(poses)
-        # self.get_logger().info(f'[PUBLISH] Published {len(poses)} poses (total published: {self.publish_count})')
 
     def create_gate_marker_object(self, pose, corners, frame_id, image_timestamp, marker_id):
 
         marker = FiducialMarker()
         marker.id = int(marker_id)
-        # marker.corners = corners # TODO: debug corners
-        # self.get_logger().info(f'corners: {corners}')
         marker.pose_cov_stamped.header.frame_id = frame_id
         marker.pose_cov_stamped.header.stamp = image_timestamp
         marker.pose_cov_stamped.pose.pose = pose
