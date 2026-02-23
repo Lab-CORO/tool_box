@@ -14,7 +14,8 @@ from geometry_msgs.msg import Point, PoseWithCovarianceStamped, PoseArray, Pose,
 from sensor_msgs.msg import Image, CameraInfo
 
 # from tf.transformations import quaternion_from_euler, euler_from_quaternion, euler_from_matrix
-from ros2_markertracker.transformations import quaternion_from_euler
+# from ros2_markertracker.transformations import quaternion_from_euler
+from scipy.spatial.transform import Rotation as R
 
 # from tf import TransformBroadcaster
 import tf_transformations
@@ -33,7 +34,7 @@ from rclpy.wait_for_message import wait_for_message
 # Ros2
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import qos_profile_sensor_data, QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 # from std_msgs.msg import String
 
 
@@ -99,7 +100,7 @@ class ProcessFramePubSub(Node):
         _result_marker_topic = '/fiducial_markers'
 
         # Declare and read parameters
-        self.declare_parameter("input_image_topic", "/camera/image_raw")
+        self.declare_parameter("input_image_topic", "/rgb/image_raw")
         _input_image_topic = self.get_parameter("input_image_topic").get_parameter_value().string_value
 
         self.declare_parameter("marker_length", 10.0)
@@ -121,18 +122,34 @@ class ProcessFramePubSub(Node):
         # get camera info from topic
         self.declare_parameter("camera_info_topic", "/camera_info")
         camera_info_topic = self.get_parameter("camera_info_topic").get_parameter_value().string_value
-        # wait for camera info
-        result = wait_for_message(CameraInfo, self, camera_info_topic)
         
-        if isinstance(result,tuple):
-            success, camera_info = result
-
-        else:
-            camera_info = result
-            success = camera_info is not None
-
-        if not success or camera_info is None:
-            self.get_logger().error('no camera info received')
+        # wait for camera info with retry logic (timeout 30 seconds)
+        self.get_logger().info(f'Waiting for camera info on {camera_info_topic}...')
+        max_retries = 6
+        retry_delay = 5  # seconds
+        camera_info = None
+        
+        for attempt in range(max_retries):
+            try:
+                result = wait_for_message(CameraInfo, self, camera_info_topic, time_to_wait=5.0)
+                
+                if isinstance(result, tuple):
+                    success, camera_info = result
+                else:
+                    camera_info = result
+                    success = camera_info is not None
+                
+                if success and camera_info is not None:
+                    self.get_logger().info(f'Camera info received on attempt {attempt + 1}')
+                    break
+            except Exception as e:
+                self.get_logger().warn(f'Attempt {attempt + 1}/{max_retries}: Camera info not ready - {str(e)}')
+                if attempt < max_retries - 1:
+                    import time
+                    time.sleep(retry_delay)
+        
+        if camera_info is None:
+            self.get_logger().error('Failed to get camera info after multiple attempts')
             return
 
             
@@ -160,14 +177,21 @@ class ProcessFramePubSub(Node):
         ## Subscribers
 
         # Image raw topic
+        # Use a permissive QoS profile that auto-negotiates with most camera drivers
+        image_qos = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,  # Changed to RELIABLE - Kinect may use this
+            durability=DurabilityPolicy.VOLATILE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=10  # Increased buffer to avoid missing frames
+        )
 
         self.image_sub = self.create_subscription(Image,
                                                   _input_image_topic,
                                                   self._image_callback,
-                                                  qos_profile=qos_profile_sensor_data)
+                                                  qos_profile=image_qos)
 
         # self.image_sub = rospy.Subscriber(_input_image_topic, Image, self._callback, queue_size=1)
-        self.get_logger().info(f'Subscribed to {_input_image_topic}')
+        self.get_logger().info(f'Subscribed to {_input_image_topic} with RELIABLE QoS')
 
 
         self.latest_msg = None  # keep latest received message
@@ -204,7 +228,6 @@ class ProcessFramePubSub(Node):
             print(e)
 
     def _image_callback(self, data):
-        # self.get_logger().info('Got New camera image')
         self.latest_msg = data
         self.new_msg_available = True
 
@@ -213,13 +236,11 @@ class ProcessFramePubSub(Node):
         if image is None:
             return
 
-        # self.get_logger().info('New image')
-
         ## Preprocess
         try:
             cv_image = self.bridge.imgmsg_to_cv2(image, "bgr8")
         except CvBridgeError as e:
-            print(e)
+            self.get_logger().error(f'CvBridge Error: {e}')
             raise e
 
         ## Pose and corners used
@@ -227,7 +248,7 @@ class ProcessFramePubSub(Node):
                                                                     draw_image=self.publish_topic_image_result)
 
         # process poses to messages
-        if poses is not None:
+        if poses is not None and len(poses) > 0:
             self._create_and_publish_markers_msgs_from_pose_results(poses, image.header.stamp, self._camera_frame_id)
 
 
@@ -264,7 +285,6 @@ class ProcessFramePubSub(Node):
         return marker
 
     def _create_and_publish_markers_msgs_from_pose_results(self, poses, image_timestamp, camera_frame_id):
-        print(poses)
 
         marker_array = MarkerArray()  # For Rviz visualization
 
@@ -278,47 +298,28 @@ class ProcessFramePubSub(Node):
 
         _index = -1
         for e in poses:
-            # print("coucou")
-            # print("NuqueNuque")
             _index += 1
 
-            # if e['marker_id'] != 10: continue # TODO: use params
 
             gate_pose = Pose()
 
-            # Debug OpenCV Ouput
-            # self.get_logger().info(f"0:{e['tvec'][0]} 1:{e['tvec'][1]} 2:{e['tvec'][2]}")
-            # self.get_logger().debug(f"roll:{e['ros_rpy'][0]} pitch:{e['ros_rpy'][1]} yaw:{e['ros_rpy'][2]}")
+            gate_pose.position.x = e['tvec'][0]/100   # Z_optique → X_rgb (avant)
+            gate_pose.position.y = e['tvec'][1]/100  # -X_optique → Y_rgb (gauche = -droite)
+            gate_pose.position.z = e['tvec'][2]/100   # Y_optique → Z_rgb (bas)
+            
+            r = R.from_euler('xyz', e['rvec'], degrees=False)
+            _quaternion_optical = r.as_quat()
 
-            # print(f"y:{e['tvec'][0]} z:{e['tvec'][1]} x:{e['tvec'][2]}")
-
-            # z, -x, -y
-            gate_pose.position.x = e['tvec'][2]/100
-            gate_pose.position.y = -e['tvec'][0]/100
-            gate_pose.position.z = -e['tvec'][1]/100
-
-            _quaternion = quaternion_from_euler(e['ros_rpy'][0],
-                                                e['ros_rpy'][1],
-                                                e['ros_rpy'][2]
-                                                )
-
-            gate_pose.orientation.x = _quaternion[0]
-            gate_pose.orientation.y = _quaternion[1]
-            gate_pose.orientation.z = _quaternion[2]
-            gate_pose.orientation.w = _quaternion[3]
-
+            gate_pose.orientation.x = _quaternion_optical[0]
+            gate_pose.orientation.y = _quaternion_optical[1]
+            gate_pose.orientation.z = _quaternion_optical[2]
+            gate_pose.orientation.w = _quaternion_optical[3]
             gate_viz_marker = self.create_viz_marker_object(gate_pose)
 
             gate_marker = self.create_gate_marker_object(gate_pose, tuple(e['corners']), camera_frame_id, image_timestamp, e['marker_id'])
 
 
             
-            # Send transform
-            # self.tf_br.sendTransform((gate_pose.position.x, gate_pose.position.y, gate_pose.position.z),
-            #                          _quaternion,
-            #                          image_timestamp,
-            #                          'marker',
-            #                          camera_frame_id)
             result_tf = TransformStamped()
             result_tf.header.stamp = self.get_clock().now().to_msg()
             result_tf.header.frame_id = self._camera_frame_id
@@ -332,11 +333,6 @@ class ProcessFramePubSub(Node):
             result_tf.transform.rotation.w = gate_pose.orientation.w
             self.tf_br.sendTransform(result_tf)
 
-            
-
-
-            # PoseWithCovarianceStamped
-            #marker.pose_cov_stamped = self._create_pose_cov_stamped(marker, camera_frame_id, image_timestamp)
 
             marker_array.markers.append(gate_viz_marker)
             pose_array.poses.append(gate_pose)
@@ -372,8 +368,6 @@ class ProcessFramePubSub(Node):
 
         marker = FiducialMarker()
         marker.id = int(marker_id)
-        # marker.corners = corners # TODO: debug corners
-        # self.get_logger().info(f'corners: {corners}')
         marker.pose_cov_stamped.header.frame_id = frame_id
         marker.pose_cov_stamped.header.stamp = image_timestamp
         marker.pose_cov_stamped.pose.pose = pose
