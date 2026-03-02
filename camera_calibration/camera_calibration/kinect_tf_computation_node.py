@@ -22,24 +22,30 @@ class kinectTFComputationNode(Node):
         # Timer pour exécuter périodiquement le calcul
         self.timer = self.create_timer(0.1, self.timer_callback)  # Exécution toutes les 0.1 secondes
  
-        # Transformation connue entre cam_link et color_cam_link
+        # Résultat de calibration hand-eye (tracking_base_frame=rgb_camera_link) :
+        # = base_link → rgb_camera_link  (_base_T_rgb_)
+        # À mettre à jour après chaque nouvelle calibration.
+        #
+        # ATTENTION : les anciens résultats ci-dessous utilisaient tracking_base_frame=camera_base
+        # → ils représentaient _base_T_camera_base_ (PAS _base_T_rgb_), d'où la rotation π et l'offset.
+        #
+        # Ancien résultat (tracking_base_frame=camera_base, NE PAS UTILISER) :
+        # tx, ty, tz, qx, qy, qz, qw: [0.0948, -0.3107, 1.1214, 0.2943, -0.0057, 0.4459, 0.8453]
+        # as euler: rpy: -0.2903, -0.9116, -2.5247  ← rotation π absorbée = BUG
         self.base_link_to_rgb = TransformStamped()
         self.base_link_to_rgb.header.frame_id = 'base_link'
         self.base_link_to_rgb.child_frame_id = 'rgb_camera_link'
-        # Remplir avec les données connues de la transformation fixe
-
-        #Calib manuelle avec model 3D:
-        #tx, ty, tz, qx, qy, qz, qw: [0.0374, -0.0625, -0.0603, 0.0153, -0.0466, 0.9926, -0.1110] as euler: translation: 0.0374, -0.0625, -0.0603   rpy: -0.0961, -0.0201, -2.9179')
-# [hand_eye_calibration-10]       tx, ty, tz, qx, qy, qz, qw: [0.0948, -0.3107, 1.1214, 0.2943, -0.0057, 0.4459, 0.8453]
-        self.base_link_to_rgb.transform.translation.x = 0.0948 # À ajuster
-        self.base_link_to_rgb.transform.translation.y = -0.3107  # À ajuster
-        self.base_link_to_rgb.transform.translation.z =  1.1214# À ajuster
-        self.base_link_to_rgb.transform.rotation.x =0.2943
-        self.base_link_to_rgb.transform.rotation.y = -0.0057
-        self.base_link_to_rgb.transform.rotation.z =  0.4459
-        self.base_link_to_rgb.transform.rotation.w =  0.8453
-
-        # # std_srvs.srv.Trigger_Response(success=True, message='Current estimate: tx, ty, tz, qx, qy, qz, qw: [0.1946, -0.3640, 0.9618, 0.4544, 0.0085, 0.8659, -0.2091] as euler: translation: 0.1946, -0.3640, 0.9618   rpy: -0.2903, -0.9116, -2.5247')
+        # TODO : remplacer par le résultat de la prochaine calibration (tracking_base_frame=rgb_camera_link)
+        # 0.0102, -0.4989, 0.8822, 0.7512, -0.5223, 0.2103, -0.3445
+        self.base_link_to_rgb.transform.translation.x = 0.0102
+        self.base_link_to_rgb.transform.translation.y = -0.4989
+        self.base_link_to_rgb.transform.translation.z =  0.8822
+        # Valeurs corrigées (permutation cyclique du bug dans calibration_backend.py) :
+        # x_correct = w_logged, y_correct = x_logged, z_correct = y_logged, w_correct = z_logged
+        self.base_link_to_rgb.transform.rotation.x =  0.7512
+        self.base_link_to_rgb.transform.rotation.y = -0.5223
+        self.base_link_to_rgb.transform.rotation.z =  0.2103
+        self.base_link_to_rgb.transform.rotation.w = -0.3445
 
  
     def timer_callback(self):
