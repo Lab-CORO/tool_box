@@ -57,9 +57,9 @@ ros2 launch camera_calibration rs_eye_on_hand_calibrate.launch.py
 ### Take picture for calibration
 In another terminal, you will need to make a service call to calibrate the camera with : 
 ```bash
-ros2 service call /hand_eye_calibration/capture_point std_srvs/srv/Trigger {}
+ros2 service call /hand_eye_calibration/capture_point ros2_markertracker_interfaces/srv/CapturePoint {}
 ```
-It is recommended to take a least 15 triggers for a better calibration accuracy. For more details on the calibration itself, refer to the [ROS2 Hand eye calibration](https://github.com/giuschio/ros2_handeye_calibration) package mentionned previously. 
+It is recommended to take a least 15 CapturePoint for a better calibration accuracy. For more details on the calibration itself, refer to the [ROS2 Hand eye calibration](https://github.com/giuschio/ros2_handeye_calibration) package mentionned previously. 
 
 When the calibration is completed, the terminal should output the transform generated between the robot and the camera, both in quaternion and Euler format.
 

@@ -28,6 +28,7 @@ find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/FiducialMarker.msg"
   "msg/FiducialMarkerArray.msg"
+  "srv/CapturePoint.srv"
   DEPENDENCIES builtin_interfaces std_msgs geometry_msgs
  )
 
