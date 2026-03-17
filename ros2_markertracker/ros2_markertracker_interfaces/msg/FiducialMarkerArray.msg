@@ -1,3 +1,0 @@
-std_msgs/Header header
-builtin_interfaces/Time camera_frame_stamp
-FiducialMarker[] marker
